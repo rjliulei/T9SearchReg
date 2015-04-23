@@ -1,10 +1,11 @@
-package com.t9search.util;
+package com.t9searchreg.util;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import com.t9search.model.ContactItem;
-import com.t9search.model.PinyinBaseUnit;
+import com.t9searchreg.model.ContactItem;
+import com.t9searchreg.model.PinyinBaseUnit;
+
 
 import net.sourceforge.pinyin4j.PinyinHelper;
 import net.sourceforge.pinyin4j.format.HanyuPinyinOutputFormat;

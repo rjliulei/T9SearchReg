@@ -1,4 +1,4 @@
-package com.t9search.model;
+package com.t9searchreg.model;
 
 import java.util.List;
 

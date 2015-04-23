@@ -1,6 +1,8 @@
-package com.t9search.util;
+package com.t9searchreg.util;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -69,13 +71,13 @@ public class T9MatchUtil {
 	 * @return boolean
 	 */
 	public static boolean matchPinyinOrNumber(String keyword,
-			final List<ContactItem> target, List<ContactItem> result) {
+			final List<? extends ContactItem> target, List<ContactItem> result) {
 
 		if (null == keyword || null == target || null == result)
 			return false;
 
 		result.clear();
-		
+
 		int count = 0;
 		String[] matches = getRegularExpression(keyword);
 		Pattern pattern = null;
@@ -88,10 +90,10 @@ public class T9MatchUtil {
 
 		for (ContactItem item : target) {
 
-			if (count >= MAX_MATCH_COUNT) {
-
-				break;
-			}
+			// if (count >= MAX_MATCH_COUNT) {
+			//
+			// break;
+			// }
 
 			if (null == matches[1]) {
 				// full spelling match
@@ -101,15 +103,18 @@ public class T9MatchUtil {
 				// simple spelling match
 				isMatched = matchSimpleSpellingReg(item, pattern);
 
-				if (!isMatched) {
-					// full spelling match
-					isMatched = matchFullSpellingReg(item, pattern);
-				} else {
+				// 关键字只有一个时不进行全拼匹配，匹配成功后通过判断首字母大写
+				if (keyword.length() > 1) {
+					if (!isMatched) {
+						// full spelling match
+						isMatched = matchFullSpellingReg(item, pattern);
+					} else {
 
-					result.add(item);
-					count++;
-					isMatched = false;
-					continue;
+						result.add(item);
+						count++;
+						isMatched = false;
+						continue;
+					}
 				}
 
 			}
@@ -131,6 +136,9 @@ public class T9MatchUtil {
 			}
 
 		}
+
+		// sort list
+		Collections.sort(result, ContactItem.COMPARATOR);
 
 		return count > 0;
 	}
@@ -181,6 +189,12 @@ public class T9MatchUtil {
 					} else {
 						stringBuilder.append(PRE_TAG).append(c)
 								.append(POST_TAG);
+
+						if (0 == j) {
+							item.setMatchStartIndex(i);
+							item.setHighlightNumber(item.getPhoneNum());
+						}
+
 						j++;
 					}
 				} else {
@@ -217,11 +231,19 @@ public class T9MatchUtil {
 		int start = 0;
 		for (String full : fullSpellings) {
 
-			matcher = pattern.matcher(full);
+			matcher = pattern.matcher(full.toLowerCase());
 
 			if (matcher.find()) {
 				match = matcher.group();
 				start = matcher.start();
+
+				// 首字母不为大写，则匹配失败
+				if (!Character.isUpperCase(full.charAt(start))) {
+					continue;
+				}
+
+				item.setMatchStartIndex(start);
+				item.setHighlightNumber(item.getPhoneNum());
 
 				// highlight
 				StringBuilder stringBuilder = new StringBuilder(full.length()
@@ -234,7 +256,7 @@ public class T9MatchUtil {
 				stringBuilder.append(full.substring(start,
 						start + match.length()));
 				stringBuilder.append(POST_TAG);
-				stringBuilder.append(full.substring(match.length()));
+				stringBuilder.append(full.substring(start + match.length()));
 
 				item.setHighlightPinyin(stringBuilder.toString());
 
@@ -267,6 +289,9 @@ public class T9MatchUtil {
 		for (String full : fullSpellings) {
 			int index = full.toLowerCase().indexOf(keyword);
 			if (-1 != index) {
+
+				item.setMatchStartIndex(index);
+				item.setHighlightNumber(item.getPhoneNum());
 
 				StringBuilder builder = (0 == index ? new StringBuilder()
 						: new StringBuilder(full.substring(0, index)));
@@ -305,6 +330,8 @@ public class T9MatchUtil {
 
 		if (-1 != index) {
 
+			item.setMatchStartIndex(ContactItem.MATCH_WEIGHT_PHONE_NUMBER
+					+ index);
 			isMatched = true;
 			// highlight
 			StringBuilder builder = (0 == index ? new StringBuilder()
@@ -313,6 +340,8 @@ public class T9MatchUtil {
 			builder.append(PRE_TAG + keyword + POST_TAG
 					+ phoneNum.substring(index + keyword.length()));
 			item.setHighlightNumber(builder.toString());
+		} else {
+			item.setHighlightNumber(item.getPhoneNum());
 		}
 
 		return isMatched;
